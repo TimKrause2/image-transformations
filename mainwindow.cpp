@@ -65,6 +65,8 @@ MainWindow::MainWindow(QWidget *parent) :
     rect.getCoords(&x1,&y1,&x2,&y2);
     scene->setSceneRect(0,0,srcPixmap.width()*2,y2+64);
 
+    workerThread = NULL;
+
     if(initialize_opencl()){
         timer = new QTimer(this);
 
@@ -73,7 +75,6 @@ MainWindow::MainWindow(QWidget *parent) :
         timer->start(1000/60);
     }
 
-    workerThread = NULL;
 }
 
 MainWindow::~MainWindow()
