@@ -16,7 +16,7 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    srcPixmap(":/images/resources/hello.png"),
+    srcPixmap(":/images/resources/1280x640hello.png"),
     clFile(":/images/resources/kernel.c", parent)
 {
     ui->setupUi(this);
@@ -223,6 +223,16 @@ void MainWindow::timer_func(void)
         if(!workerThread->isFinished()){
             return;
         }
+        QImage dstImage((uchar*)dstImage_data,image_width,
+                        image_height,image_stride*sizeof(QRgb),
+                        QImage::Format_ARGB32);
+
+        dstPixmap = QPixmap::fromImage(dstImage);
+        dstPixmap.save("/tmp/images.png");
+
+        rightPixmapItem->setPixmap(dstPixmap);
+
+
     }
 
     //glm::vec2 A((float)srcImage_argb.width()/2,-(float)srcImage_argb.height()/2);
@@ -311,14 +321,6 @@ void MainWindow::timer_func(void)
     //    qDebug("clFinish error:%d",r);
     //    return;
     //}
-
-    QImage dstImage((uchar*)dstImage_data,image_width,
-                    image_height,image_stride*sizeof(QRgb),
-                    QImage::Format_ARGB32);
-
-    dstPixmap = QPixmap::fromImage(dstImage);
-
-    rightPixmapItem->setPixmap(dstPixmap);
 
     theta+=dtheta;
     if(theta>2*M_PI)theta-=2*M_PI;

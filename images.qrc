@@ -5,5 +5,6 @@
         <file>resources/system icon.png</file>
         <file>resources/white.png</file>
         <file>resources/background.png</file>
+        <file>resources/1280x640hello.png</file>
     </qresource>
 </RCC>
