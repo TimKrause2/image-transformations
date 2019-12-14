@@ -7,7 +7,10 @@ sudo apt install ocl-icd-opencl-dev
 
 and then you'll also need an ICD(Installable Client Driver). This depends on
 your hardware. You can try https://packages.ubuntu.com/search?keywords=opencl-icd&searchon=names&suite=all&section=all
-and check for a driver that matches your hardware.
+and check for a driver that matches your hardware. As you can see you may have to add a repository to apt. This can
+be done with:
+
+sudo apt-add-repository universe
 
 If you want to check your installation use clinfo. It can be installed with:
 
