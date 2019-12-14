@@ -12,6 +12,10 @@ be done with:
 
 sudo apt-add-repository universe
 
+or if you want to add the multiverse repository
+
+sudo apt-add-repository multiverse
+
 If you want to check your installation use clinfo. It can be installed with:
 
 sudo apt install clinfo
