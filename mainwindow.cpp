@@ -4,6 +4,7 @@
 #include <QtMath>
 #include <QTimer>
 #include <QMatrix>
+#include <QDoubleValidator>
 #include <glm/glm.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 #include <glm/gtc/matrix_access.hpp>
@@ -20,10 +21,34 @@ MainWindow::MainWindow(QWidget *parent) :
     clFile(":/images/resources/kernel.c", parent)
 {
     ui->setupUi(this);
+    QValidator *validator = new QDoubleValidator(0.0,360.0,10,this);
+    ui->rotLineEdit->setValidator(validator);
+    ui->rotLineEdit->setText("0.0");
+    ui->rotpPushButton->setIcon(QIcon(":/images/resources/rotp.png"));
+    ui->rotmPushButton->setIcon(QIcon(":/images/resources/rotm.png"));
+
+    connect(ui->rotLineEdit,
+            &QLineEdit::returnPressed,
+            this,
+            &MainWindow::rotationReturnPressed);
+    connect(ui->rotSlider,
+            &QSlider::sliderPressed,
+            this,
+            &MainWindow::rotSliderPressed);
+    connect(ui->rotSlider,
+            &QSlider::valueChanged,
+            this,
+            &MainWindow::rotSliderValueChanged);
+    connect(ui->rotpPushButton,
+            &QAbstractButton::clicked,
+            this,
+            &MainWindow::rotpClicked);
+    connect(ui->rotmPushButton,
+            &QAbstractButton::clicked,
+            this,
+            &MainWindow::rotmClicked);
 
     theta = 0.0;
-    rps = 0.0001;
-    dtheta = rps*2*M_PI/60;
     setFocusPolicy(Qt::ClickFocus);
 
     scene = new QGraphicsScene(0,0,srcPixmap.width()*2,srcPixmap.height(), this);
@@ -107,7 +132,7 @@ int MainWindow::initialize_opencl(void)
                 devices[0],
             0,
             NULL);
-    size_t srcLengths[]={clFile.size()};
+    size_t srcLengths[]={(size_t)clFile.size()};
     program = clCreateProgramWithSource(
                 context,
                 1,
@@ -205,6 +230,15 @@ void MainWindow::build_info(cl_program program, cl_device_id device){
     }
 }
 
+void MainWindow::rotSliderInc(int delta)
+{
+    int value = ui->rotSlider->value();
+    value += delta;
+    if(value>=0 && value<=360){
+        ui->rotSlider->setValue(value);
+    }
+}
+
 void MainWindow::timer_func(void)
 {
     // test if the worker thread is finished
@@ -268,7 +302,7 @@ void MainWindow::timer_func(void)
     clSetKernelArg(kernel,4,sizeof(cl_int),&image_height);
     clSetKernelArg(kernel,5,sizeof(cl_mem),&M_inv_buffer);
 
-    size_t global_work_size[]={image_height};
+    size_t global_work_size[]={(size_t)image_height};
     r = clEnqueueNDRangeKernel(
                 queue,
                 kernel,
@@ -301,52 +335,37 @@ void MainWindow::timer_func(void)
     workerThread = new WorkerThread(queue);
     workerThread->start();
 
-
-
-
-
-    //r = clFinish(queue);
-    //if(r!=CL_SUCCESS){
-    //    qDebug("clFinish error:%d",r);
-    //    return;
-    //}
-
-    theta+=dtheta;
-    if(theta>2*M_PI)theta-=2*M_PI;
 }
 
-void MainWindow::update_rps(float m){
-    rps*=m;
-    if(rps<RPS_MIN)rps = RPS_MIN;
-    if(rps>RPS_MAX)rps = RPS_MAX;
-    dtheta = rps*2*M_PI/60;
-}
-
-
-bool MainWindow::event(QEvent *event)
+void MainWindow::rotationReturnPressed(void)
 {
-    if(event->type() == QEvent::KeyPress){
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        int key = keyEvent->key();
-        qDebug("keyPressEvent key:0x%X",key);
-        if(key==Qt::Key_Up){
-            if(keyEvent->modifiers()&Qt::ControlModifier){
-                update_rps(1.259);
-            }else{
-                update_rps(10.0);
-            }
-            return true;
-        }
-        else if(key==Qt::Key_Down){
-            if(keyEvent->modifiers()&Qt::ControlModifier){
-                update_rps(0.794);
-            }else{
-                update_rps(0.1);
-            }
-            return true;
-        }else{
-            return false;
-        }
-    }
-    return QMainWindow::event(event);
+    QString text = ui->rotLineEdit->text();
+    float angle = (float)text.toDouble();
+    theta = angle*M_PI/180.0;
+
+}
+
+void MainWindow::rotSliderPressed()
+{
+    int value = ui->rotSlider->value();
+    theta = (float)(value)*M_PI/180.0f;
+    QString rot_str= QString("%1.0").arg(value);
+    ui->rotLineEdit->setText(rot_str);
+}
+
+void MainWindow::rotSliderValueChanged(int value)
+{
+    theta = (float)(value)*M_PI/180.0f;
+    QString rot_str= QString("%1.0").arg(value);
+    ui->rotLineEdit->setText(rot_str);
+}
+
+void MainWindow::rotpClicked(bool checked)
+{
+    rotSliderInc(1);
+}
+
+void MainWindow::rotmClicked(bool checked)
+{
+    rotSliderInc(-1);
 }

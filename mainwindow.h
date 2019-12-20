@@ -69,21 +69,23 @@ private:
     cl_mem M_inv_buffer;
 
     float theta;
-    float dtheta;
-    float rps;
     WorkerThread *workerThread;
 
     int initialize_opencl(void);
-    void update_rps(float m);
 
     void build_info(cl_program program, cl_device_id device);
+    void rotSliderInc(int delta);
 
 public slots:
     void timer_func(void);
+    void rotationReturnPressed(void);
+    void rotSliderPressed(void);
+    void rotSliderValueChanged(int value);
+    void rotpClicked(bool checked);
+    void rotmClicked(bool checked);
+
 
 protected:
-    bool event(QEvent *event) override;
-
 
 };
 

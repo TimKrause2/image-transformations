@@ -703,7 +703,7 @@ kernel void affine_transform_aa_exp(
                     if(yEdgeLeft->inside_ends[0]==0b1111){
                         PolygonAddVertex(&polygon,yEdgeLeft->v_ends[0]);
                     }else{
-                        PixelAddVertices(pixelVFlags[y][x],&srcPolygon,&polygon);
+                        PixelAddVertices(*pixelVFlag,&srcPolygon,&polygon);
                         iv_drawn = true;
                     }
                     break;
@@ -728,7 +728,7 @@ kernel void affine_transform_aa_exp(
                         PolygonAddVertex(&polygon,xEdgeBottom->v_ends[0]);
                     }else{
                         if(!iv_drawn){
-                            PixelAddVertices(pixelVFlags[y][x],&srcPolygon,&polygon);
+                            PixelAddVertices(*pixelVFlag,&srcPolygon,&polygon);
                             iv_drawn = true;
                         }
                     }
@@ -755,7 +755,7 @@ kernel void affine_transform_aa_exp(
                         PolygonAddVertex(&polygon,yEdgeRight->v_ends[1]);
                     }else{
                         if(!iv_drawn){
-                            PixelAddVertices(pixelVFlags[y][x],&srcPolygon,&polygon);
+                            PixelAddVertices(*pixelVFlag,&srcPolygon,&polygon);
                             iv_drawn = true;
                         }
                     }
@@ -782,7 +782,7 @@ kernel void affine_transform_aa_exp(
                         PolygonAddVertex(&polygon,xEdgeTop->v_ends[1]);
                     }else{
                         if(!iv_drawn){
-                            PixelAddVertices(pixelVFlags[y][x],&srcPolygon,&polygon);
+                            PixelAddVertices(*pixelVFlag,&srcPolygon,&polygon);
                             iv_drawn = true;
                         }
                     }
