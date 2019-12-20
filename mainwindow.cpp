@@ -16,7 +16,7 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    srcPixmap(":/images/resources/1280x640hello.png"),
+    srcPixmap(":/images/resources/hello.png"),
     clFile(":/images/resources/kernel.c", parent)
 {
     ui->setupUi(this);
@@ -46,24 +46,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     QImage::Format image_argb_format = srcImage_argb.format();
-    QString msg = QString("format:%1\n argb_format:%2").arg(image_format).arg(image_argb_format);
-    QGraphicsSimpleTextItem *msgTextItem = scene->addSimpleText(msg);
-    msgTextItem->setBrush(QColor(128,128,128,255));
+
+    qDebug("image format:%d image argb format:%d",image_format,image_argb_format);
 
     clFile.open(QIODevice::ReadOnly);
     clData = new char[clFile.size()+1];
     clFile.read(clData,clFile.size());
     clData[clFile.size()]=0;
-
-    QString clString(clData);
-    QGraphicsSimpleTextItem *clTextItem = scene->addSimpleText(clString);
-    clTextItem->setBrush(QColor(255,255,255,255));
-    clTextItem->setPos(64,64);
-    clTextItem->setFont(QFont("Ubuntu mono",8));
-    QRectF rect = clTextItem->boundingRect();
-    qreal x1,y1,x2,y2;
-    rect.getCoords(&x1,&y1,&x2,&y2);
-    scene->setSceneRect(0,0,srcPixmap.width()*2,y2+64);
 
     workerThread = NULL;
 
@@ -135,7 +124,7 @@ int MainWindow::initialize_opencl(void)
         build_info(program,devices[0]);
         return 0;
     }
-    kernel = clCreateKernel(program,"affine_transform_aa",&r);
+    kernel = clCreateKernel(program,"affine_transform_aa_exp",&r);
     if(r!=CL_SUCCESS){
         qDebug("clCreateKernel failed %d",r);
         return 0;
