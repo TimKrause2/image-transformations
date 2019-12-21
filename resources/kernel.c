@@ -297,7 +297,7 @@ void PixelEdgeBorderBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
     }
 }
 
-void PixelAddVertices(int flags, SrcPolygon *sp, Polygon *polygon){
+void PolygonAddVertexFlags(int flags, SrcPolygon *sp, Polygon *polygon){
     switch(flags){
     case 0b0000:
         return;
@@ -553,6 +553,16 @@ kernel void affine_transform_aa_exp(
     int pixelVFlags[GRID_SIZE][GRID_SIZE];
     Polygon polygon;
     SrcPolygon srcPolygon;
+
+    srcPolygon.vertices[0].v10 = f2_dsrcy;
+    srcPolygon.vertices[1].v10 = f2_dsrcx;
+    srcPolygon.vertices[2].v10 = -f2_dsrcy;
+    srcPolygon.vertices[3].v10 = -f2_dsrcx;
+    for(int i=0;i<4;i++){
+        float2 v10 = srcPolygon.vertices[i].v10;
+        srcPolygon.vertices[i].N = normalize((float2)(-v10.y,v10.x));
+    }
+
     int i_x_dst;
     for(i_x_dst=0;i_x_dst<width;i_x_dst++,dst++,f2_src00+=f2_dsrcx){
         float2 f2_src01 = f2_src00 + f2_dsrcy;
@@ -583,17 +593,9 @@ kernel void affine_transform_aa_exp(
 
         // initialize the srcPolygon
         srcPolygon.vertices[0].v0 = f2_src00;
-        srcPolygon.vertices[0].v10 = f2_dsrcy;
         srcPolygon.vertices[1].v0 = f2_src01;
-        srcPolygon.vertices[1].v10 = f2_dsrcx;
         srcPolygon.vertices[2].v0 = f2_src11;
-        srcPolygon.vertices[2].v10 = -f2_dsrcy;
         srcPolygon.vertices[3].v0 = f2_src10;
-        srcPolygon.vertices[3].v10 = -f2_dsrcx;
-        for(int i=0;i<4;i++){
-            float2 v10 = srcPolygon.vertices[i].v10;
-            srcPolygon.vertices[i].N = normalize((float2)(-v10.y,v10.x));
-        }
 
         // initialize the pixelVertices
         PixelVertex *pixelVertex = &pixelVertices[0][0];
@@ -703,7 +705,7 @@ kernel void affine_transform_aa_exp(
                     if(yEdgeLeft->inside_ends[0]==0b1111){
                         PolygonAddVertex(&polygon,yEdgeLeft->v_ends[0]);
                     }else{
-                        PixelAddVertices(*pixelVFlag,&srcPolygon,&polygon);
+                        PolygonAddVertexFlags(*pixelVFlag,&srcPolygon,&polygon);
                         iv_drawn = true;
                     }
                     break;
@@ -728,7 +730,7 @@ kernel void affine_transform_aa_exp(
                         PolygonAddVertex(&polygon,xEdgeBottom->v_ends[0]);
                     }else{
                         if(!iv_drawn){
-                            PixelAddVertices(*pixelVFlag,&srcPolygon,&polygon);
+                            PolygonAddVertexFlags(*pixelVFlag,&srcPolygon,&polygon);
                             iv_drawn = true;
                         }
                     }
@@ -755,7 +757,7 @@ kernel void affine_transform_aa_exp(
                         PolygonAddVertex(&polygon,yEdgeRight->v_ends[1]);
                     }else{
                         if(!iv_drawn){
-                            PixelAddVertices(*pixelVFlag,&srcPolygon,&polygon);
+                            PolygonAddVertexFlags(*pixelVFlag,&srcPolygon,&polygon);
                             iv_drawn = true;
                         }
                     }
@@ -782,7 +784,7 @@ kernel void affine_transform_aa_exp(
                         PolygonAddVertex(&polygon,xEdgeTop->v_ends[1]);
                     }else{
                         if(!iv_drawn){
-                            PixelAddVertices(*pixelVFlag,&srcPolygon,&polygon);
+                            PolygonAddVertexFlags(*pixelVFlag,&srcPolygon,&polygon);
                             iv_drawn = true;
                         }
                     }
