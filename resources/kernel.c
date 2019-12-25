@@ -110,15 +110,19 @@ float PolygonArea(Polygon *p){
     return area/2.0f;
 }
 
-void PolygonAddVertex(Polygon *p, float2 v){
-    p->vertices[p->N] = v;
-    p->N++;
-}
+//void PolygonAddVertex(Polygon *p, float2 v){
+//    p->vertices[p->N] = v;
+//    p->N++;
+//}
+
+#define PolygonAddVertex(polygon_ptr,vertex) \
+    (polygon_ptr)->vertices[(polygon_ptr)->N++] = vertex
 
 typedef struct {
     int code;
     int inside_ends[2];
     int inside_edge[2];
+    int vflag_edge[2];
     float2 v_ends[2];
     float2 v_edge[2];
 } PixelEdge;
@@ -167,11 +171,13 @@ void PixelEdgeBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
                 pe->code = 1;
                 pe->v_edge[1] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[e].v0,sp->vertices[e].v10);
                 pe->inside_edge[1] = f2BisectSrcPolygon(sp,pe->v_edge[1]);
+                pe->vflag_edge[1] = edge_bit;
             }else{
                 // v1 is inside
                 pe->code = 2;
                 pe->v_edge[0] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[e].v0,sp->vertices[e].v10);
                 pe->inside_edge[0] = f2BisectSrcPolygon(sp,pe->v_edge[0]);
+                pe->vflag_edge[0] = edge_bit;
             }
             break;
         case 1:
@@ -187,11 +193,13 @@ void PixelEdgeBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
                     pe->code = 1;
                     pe->v_edge[1] = f2intersection_delta(pe->v_ends[0],pe->v_edge[1],sp->vertices[e].v0,sp->vertices[e].v10);
                     pe->inside_edge[1] = f2BisectSrcPolygon(sp,pe->v_edge[1]);
+                    pe->vflag_edge[1] = edge_bit;
                 }else{
                     // v_edge[1] is inside
                     pe->code = 3;
                     pe->v_edge[0] = f2intersection_delta(pe->v_ends[0],pe->v_edge[1],sp->vertices[e].v0,sp->vertices[e].v10);
                     pe->inside_edge[0] = f2BisectSrcPolygon(sp,pe->v_edge[0]);
+                    pe->vflag_edge[0] = edge_bit;
                 }
             }
             break;
@@ -208,11 +216,13 @@ void PixelEdgeBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
                     pe->code = 2;
                     pe->v_edge[0] = f2intersection_delta(pe->v_edge[0],pe->v_ends[1],sp->vertices[e].v0,sp->vertices[e].v10);
                     pe->inside_edge[0] = f2BisectSrcPolygon(sp,pe->v_edge[0]);
+                    pe->vflag_edge[0] = edge_bit;
                 }else{
                     // edge->v[0] is inside
                     pe->code = 3;
                     pe->v_edge[1] = f2intersection_delta(pe->v_edge[0],pe->v_ends[1],sp->vertices[e].v0,sp->vertices[e].v10);
                     pe->inside_edge[1] = f2BisectSrcPolygon(sp,pe->v_edge[1]);
+                    pe->vflag_edge[1] = edge_bit;
                 }
             }
             break;
@@ -223,10 +233,12 @@ void PixelEdgeBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
                     pe->code = 3;
                     pe->v_edge[1] = f2intersection_delta(pe->v_edge[0],pe->v_edge[1],sp->vertices[e].v0,sp->vertices[e].v10);
                     pe->inside_edge[1] = f2BisectSrcPolygon(sp,pe->v_edge[1]);
+                    pe->vflag_edge[1] = edge_bit;
                 }else{
                     pe->code = 3;
                     pe->v_edge[0] = f2intersection_delta(pe->v_edge[0],pe->v_edge[1],sp->vertices[e].v0,sp->vertices[e].v10);
                     pe->inside_edge[0] = f2BisectSrcPolygon(sp,pe->v_edge[0]);
+                    pe->vflag_edge[0] = edge_bit;
                 }
             }
             break;
@@ -246,10 +258,12 @@ void PixelEdgeBorderBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
                 // v0 is inside
                 pe->code = 1;
                 pe->v_edge[1] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[0].v0,sp->vertices[0].v10);
+                pe->vflag_edge[1] = 0b0001;
             }else{
                 // v1 is inside
                 pe->code = 2;
                 pe->v_edge[0] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[0].v0,sp->vertices[0].v10);
+                pe->vflag_edge[0] = 0b0001;
             }
         }
         return;
@@ -259,10 +273,12 @@ void PixelEdgeBorderBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
                 // v0 is inside
                 pe->code = 1;
                 pe->v_edge[1] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[1].v0,sp->vertices[1].v10);
+                pe->vflag_edge[1] = 0b0010;
             }else{
                 // v1 is inside
                 pe->code = 2;
                 pe->v_edge[0] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[1].v0,sp->vertices[1].v10);
+                pe->vflag_edge[0] = 0b0010;
             }
         }
         return;
@@ -272,10 +288,12 @@ void PixelEdgeBorderBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
                 // v0 is inside
                 pe->code = 1;
                 pe->v_edge[1] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[2].v0,sp->vertices[2].v10);
+                pe->vflag_edge[1] = 0b0100;
             }else{
                 // v1 is inside
                 pe->code = 2;
                 pe->v_edge[0] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[2].v0,sp->vertices[2].v10);
+                pe->vflag_edge[0] = 0b0100;
             }
         }
         return;
@@ -285,10 +303,12 @@ void PixelEdgeBorderBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
                 // v0 is inside
                 pe->code = 1;
                 pe->v_edge[1] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[3].v0,sp->vertices[3].v10);
+                pe->vflag_edge[1] = 0b1000;
             }else{
                 // v1 is inside
                 pe->code = 2;
                 pe->v_edge[0] = f2intersection_delta(pe->v_ends[0],pe->v_ends[1],sp->vertices[3].v0,sp->vertices[3].v10);
+                pe->vflag_edge[0] = 0b1000;
             }
         }
         return;
@@ -359,6 +379,126 @@ void PolygonAddVertexFlags(int flags, SrcPolygon *sp, Polygon *polygon){
     case 0b1111:
         // should never happen
         return;
+    }
+}
+
+void PolygonAddSingleVFlag(Polygon *polygon, int vflag, SrcPolygon *sp){
+    switch(vflag){
+    case 0b0001:
+        PolygonAddVertex(polygon,sp->vertices[0].v0);
+        return;
+    case 0b0010:
+        PolygonAddVertex(polygon,sp->vertices[1].v0);
+        return;
+    case 0b0100:
+        PolygonAddVertex(polygon,sp->vertices[2].v0);
+        return;
+    case 0b1000:
+        PolygonAddVertex(polygon,sp->vertices[3].v0);
+        return;
+    }
+}
+
+void PolygonAddMultiVFlag(Polygon *polygon, int vflag, SrcPolygon *sp){
+    switch(vflag){
+    case 0b0000:
+        return;
+    case 0b0011:
+        PolygonAddVertex(polygon,sp->vertices[0].v0);
+        PolygonAddVertex(polygon,sp->vertices[1].v0);
+        return;
+    case 0b0110:
+        PolygonAddVertex(polygon,sp->vertices[1].v0);
+        PolygonAddVertex(polygon,sp->vertices[2].v0);
+        return;
+    case 0b0111:
+        PolygonAddVertex(polygon,sp->vertices[0].v0);
+        PolygonAddVertex(polygon,sp->vertices[1].v0);
+        PolygonAddVertex(polygon,sp->vertices[2].v0);
+        return;
+    case 0b1001:
+        PolygonAddVertex(polygon,sp->vertices[3].v0);
+        PolygonAddVertex(polygon,sp->vertices[0].v0);
+        return;
+    case 0b1011:
+        PolygonAddVertex(polygon,sp->vertices[3].v0);
+        PolygonAddVertex(polygon,sp->vertices[0].v0);
+        PolygonAddVertex(polygon,sp->vertices[1].v0);
+        return;
+    case 0b1100:
+        PolygonAddVertex(polygon,sp->vertices[2].v0);
+        PolygonAddVertex(polygon,sp->vertices[3].v0);
+        return;
+    case 0b1101:
+        PolygonAddVertex(polygon,sp->vertices[2].v0);
+        PolygonAddVertex(polygon,sp->vertices[3].v0);
+        PolygonAddVertex(polygon,sp->vertices[0].v0);
+        return;
+    case 0b1110:
+        PolygonAddVertex(polygon,sp->vertices[1].v0);
+        PolygonAddVertex(polygon,sp->vertices[2].v0);
+        PolygonAddVertex(polygon,sp->vertices[3].v0);
+        return;
+    }
+}
+
+void PolygonAddEdgeSingleVertexForward(Polygon *polygon, PixelEdge *edge, int vflag, SrcPolygon *sp)
+{
+    switch(edge->code){
+    case 0:
+        if(edge->inside_ends[0]==0b1111){
+            PolygonAddVertex(polygon,edge->v_ends[0]);
+        }
+        break;
+    case 1:
+        PolygonAddVertex(polygon,edge->v_ends[0]);
+        PolygonAddVertex(polygon,edge->v_edge[1]);
+        break;
+    case 2:
+        vflag &= edge->vflag_edge[0];
+        if(vflag){
+            PolygonAddSingleVFlag(polygon, vflag, sp);
+        }
+        PolygonAddVertex(polygon,edge->v_edge[0]);
+        break;
+    case 3:
+        vflag &= edge->vflag_edge[0];
+        if(vflag){
+            PolygonAddSingleVFlag(polygon, vflag, sp);
+        }
+        PolygonAddVertex(polygon,edge->v_edge[0]);
+        PolygonAddVertex(polygon,edge->v_edge[1]);
+        break;
+    }
+}
+
+void PolygonAddEdgeSingleVertexReverse(Polygon *polygon, PixelEdge *edge, int vflag, SrcPolygon *sp)
+{
+    switch(edge->code){
+    case 0:
+        if(edge->inside_ends[1]==0b1111){
+            PolygonAddVertex(polygon,edge->v_ends[1]);
+        }
+        break;
+    case 1:
+        vflag &= edge->vflag_edge[1];
+        if(vflag){
+            PolygonAddSingleVFlag(polygon, vflag, sp);
+        }
+        PolygonAddVertex(polygon,edge->v_edge[1]);
+        break;
+    case 2:
+        PolygonAddVertex(polygon,edge->v_ends[1]);
+        PolygonAddVertex(polygon,edge->v_edge[0]);
+        break;
+    case 3:
+        vflag &= edge->vflag_edge[1];
+        if(vflag){
+            PolygonAddSingleVFlag(polygon, vflag, sp);
+        }
+        PolygonAddVertex(polygon,edge->v_edge[1]);
+        PolygonAddVertex(polygon,edge->v_edge[0]);
+        break;
     }
 }
 
@@ -554,6 +694,10 @@ kernel void affine_transform_aa_exp(
     Polygon polygon;
     SrcPolygon srcPolygon;
 
+    //
+    // initialize the parts of the source polygon
+    // that don't change
+    //
     srcPolygon.vertices[0].v10 = f2_dsrcy;
     srcPolygon.vertices[1].v10 = f2_dsrcx;
     srcPolygon.vertices[2].v10 = -f2_dsrcy;
@@ -562,6 +706,7 @@ kernel void affine_transform_aa_exp(
         float2 v10 = srcPolygon.vertices[i].v10;
         srcPolygon.vertices[i].N = normalize((float2)(-v10.y,v10.x));
     }
+    float total_src_area = f2cross(srcPolygon.vertices[0].v10,srcPolygon.vertices[1].v10);
 
     int i_x_dst;
     for(i_x_dst=0;i_x_dst<width;i_x_dst++,dst++,f2_src00+=f2_dsrcx){
@@ -638,7 +783,6 @@ kernel void affine_transform_aa_exp(
         PixelEdge *yEdgeLeft = &yEdges[0][0];
         PixelEdge *yEdgeRight = &yEdges[0][1];
         pixelVFlag = &pixelVFlags[0][0];
-        float total_src_area = f2cross(srcPolygon.vertices[0].v10,srcPolygon.vertices[1].v10);
         int x_src;
         int y_src;
         for(int y=0,y_src=i2_v0.y;y<Npixely;y++,y_src--){
@@ -696,110 +840,119 @@ kernel void affine_transform_aa_exp(
                 // create the polygon for this pixel
                 //
                 polygon.N = 0;
-                bool iv_drawn = false;
-                //
-                // draw the left edge
-                //
-                switch(yEdgeLeft->code){
-                case 0:
-                    if(yEdgeLeft->inside_ends[0]==0b1111){
+                if(*pixelVFlag==0b0001 || *pixelVFlag==0b0010
+                        || *pixelVFlag==0b0100 || *pixelVFlag==0b1000
+                        || *pixelVFlag==0b0101 || *pixelVFlag==0b1010){
+                    PolygonAddEdgeSingleVertexForward(&polygon,yEdgeLeft,*pixelVFlag,&srcPolygon);
+                    PolygonAddEdgeSingleVertexForward(&polygon,xEdgeBottom,*pixelVFlag,&srcPolygon);
+                    PolygonAddEdgeSingleVertexReverse(&polygon,yEdgeRight,*pixelVFlag,&srcPolygon);
+                    PolygonAddEdgeSingleVertexReverse(&polygon,xEdgeTop,*pixelVFlag,&srcPolygon);
+                }else{
+                    bool iv_drawn = false;
+                    //
+                    // draw the left edge
+                    //
+                    switch(yEdgeLeft->code){
+                    case 0:
+                        if(yEdgeLeft->inside_ends[0]==0b1111){
+                            PolygonAddVertex(&polygon,yEdgeLeft->v_ends[0]);
+                        }else{
+                            PolygonAddMultiVFlag(&polygon, *pixelVFlag, &srcPolygon);
+                            iv_drawn = true;
+                        }
+                        break;
+                    case 1:
                         PolygonAddVertex(&polygon,yEdgeLeft->v_ends[0]);
-                    }else{
-                        PolygonAddVertexFlags(*pixelVFlag,&srcPolygon,&polygon);
-                        iv_drawn = true;
+                        PolygonAddVertex(&polygon,yEdgeLeft->v_edge[1]);
+                        break;
+                    case 2:
+                        PolygonAddVertex(&polygon,yEdgeLeft->v_edge[0]);
+                        break;
+                    case 3:
+                        PolygonAddVertex(&polygon,yEdgeLeft->v_edge[0]);
+                        PolygonAddVertex(&polygon,yEdgeLeft->v_edge[1]);
+                        break;
                     }
-                    break;
-                case 1:
-                    PolygonAddVertex(&polygon,yEdgeLeft->v_ends[0]);
-                    PolygonAddVertex(&polygon,yEdgeLeft->v_edge[1]);
-                    break;
-                case 2:
-                    PolygonAddVertex(&polygon,yEdgeLeft->v_edge[0]);
-                    break;
-                case 3:
-                    PolygonAddVertex(&polygon,yEdgeLeft->v_edge[0]);
-                    PolygonAddVertex(&polygon,yEdgeLeft->v_edge[1]);
-                    break;
-                }
-                //
-                // draw the bottom edge
-                //
-                switch(xEdgeBottom->code){
-                case 0:
-                    if(xEdgeBottom->inside_ends[0]==0b1111){
+                    //
+                    // draw the bottom edge
+                    //
+                    switch(xEdgeBottom->code){
+                    case 0:
+                        if(xEdgeBottom->inside_ends[0]==0b1111){
+                            PolygonAddVertex(&polygon,xEdgeBottom->v_ends[0]);
+                        }else{
+                            if(!iv_drawn){
+                                PolygonAddMultiVFlag(&polygon, *pixelVFlag, &srcPolygon);
+                                iv_drawn = true;
+                            }
+                        }
+                        break;
+                    case 1:
                         PolygonAddVertex(&polygon,xEdgeBottom->v_ends[0]);
-                    }else{
-                        if(!iv_drawn){
-                            PolygonAddVertexFlags(*pixelVFlag,&srcPolygon,&polygon);
-                            iv_drawn = true;
-                        }
+                        PolygonAddVertex(&polygon,xEdgeBottom->v_edge[1]);
+                        break;
+                    case 2:
+                        PolygonAddVertex(&polygon,xEdgeBottom->v_edge[0]);
+                        break;
+                    case 3:
+                        PolygonAddVertex(&polygon,xEdgeBottom->v_edge[0]);
+                        PolygonAddVertex(&polygon,xEdgeBottom->v_edge[1]);
+                        break;
                     }
-                    break;
-                case 1:
-                    PolygonAddVertex(&polygon,xEdgeBottom->v_ends[0]);
-                    PolygonAddVertex(&polygon,xEdgeBottom->v_edge[1]);
-                    break;
-                case 2:
-                    PolygonAddVertex(&polygon,xEdgeBottom->v_edge[0]);
-                    break;
-                case 3:
-                    PolygonAddVertex(&polygon,xEdgeBottom->v_edge[0]);
-                    PolygonAddVertex(&polygon,xEdgeBottom->v_edge[1]);
-                    break;
-                }
-                //
-                // draw the right edge - it's in the reverse direction to
-                // the drawing order
-                //
-                switch(yEdgeRight->code){
-                case 0:
-                    if(yEdgeRight->inside_ends[1]==0b1111){
+                    //
+                    // draw the right edge - it's in the reverse direction to
+                    // the drawing order
+                    //
+                    switch(yEdgeRight->code){
+                    case 0:
+                        if(yEdgeRight->inside_ends[1]==0b1111){
+                            PolygonAddVertex(&polygon,yEdgeRight->v_ends[1]);
+                        }else{
+                            if(!iv_drawn){
+                                PolygonAddMultiVFlag(&polygon, *pixelVFlag, &srcPolygon);
+                                iv_drawn = true;
+                            }
+                        }
+                        break;
+                    case 1:
+                        PolygonAddVertex(&polygon,yEdgeRight->v_edge[1]);
+                        break;
+                    case 2:
                         PolygonAddVertex(&polygon,yEdgeRight->v_ends[1]);
-                    }else{
-                        if(!iv_drawn){
-                            PolygonAddVertexFlags(*pixelVFlag,&srcPolygon,&polygon);
-                            iv_drawn = true;
-                        }
+                        PolygonAddVertex(&polygon,yEdgeRight->v_edge[0]);
+                        break;
+                    case 3:
+                        PolygonAddVertex(&polygon,yEdgeRight->v_edge[1]);
+                        PolygonAddVertex(&polygon,yEdgeRight->v_edge[0]);
+                        break;
                     }
-                    break;
-                case 1:
-                    PolygonAddVertex(&polygon,yEdgeRight->v_edge[1]);
-                    break;
-                case 2:
-                    PolygonAddVertex(&polygon,yEdgeRight->v_ends[1]);
-                    PolygonAddVertex(&polygon,yEdgeRight->v_edge[0]);
-                    break;
-                case 3:
-                    PolygonAddVertex(&polygon,yEdgeRight->v_edge[1]);
-                    PolygonAddVertex(&polygon,yEdgeRight->v_edge[0]);
-                    break;
-                }
-                //
-                // draw the top edge - it's in the reverse direction
-                // as well
-                //
-                switch(xEdgeTop->code){
-                case 0:
-                    if(xEdgeTop->inside_ends[1]==0b1111){
+                    //
+                    // draw the top edge - it's in the reverse direction
+                    // as well
+                    //
+                    switch(xEdgeTop->code){
+                    case 0:
+                        if(xEdgeTop->inside_ends[1]==0b1111){
+                            PolygonAddVertex(&polygon,xEdgeTop->v_ends[1]);
+                        }else{
+                            if(!iv_drawn){
+                                PolygonAddMultiVFlag(&polygon, *pixelVFlag, &srcPolygon);
+                                iv_drawn = true;
+                            }
+                        }
+                        break;
+                    case 1:
+                        PolygonAddVertex(&polygon,xEdgeTop->v_edge[1]);
+                        break;
+                    case 2:
                         PolygonAddVertex(&polygon,xEdgeTop->v_ends[1]);
-                    }else{
-                        if(!iv_drawn){
-                            PolygonAddVertexFlags(*pixelVFlag,&srcPolygon,&polygon);
-                            iv_drawn = true;
-                        }
+                        PolygonAddVertex(&polygon,xEdgeTop->v_edge[0]);
+                        break;
+                    case 3:
+                        PolygonAddVertex(&polygon,xEdgeTop->v_edge[1]);
+                        PolygonAddVertex(&polygon,xEdgeTop->v_edge[0]);
+                        break;
                     }
-                    break;
-                case 1:
-                    PolygonAddVertex(&polygon,xEdgeTop->v_edge[1]);
-                    break;
-                case 2:
-                    PolygonAddVertex(&polygon,xEdgeTop->v_ends[1]);
-                    PolygonAddVertex(&polygon,xEdgeTop->v_edge[0]);
-                    break;
-                case 3:
-                    PolygonAddVertex(&polygon,xEdgeTop->v_edge[1]);
-                    PolygonAddVertex(&polygon,xEdgeTop->v_edge[0]);
-                    break;
                 }
 
                 uchar4 src_color;
