@@ -693,18 +693,50 @@ kernel void affine_transform_aa_exp(
     int pixelVFlags[GRID_SIZE][GRID_SIZE];
     Polygon polygon;
     SrcPolygon srcPolygon;
-
+    //
+    // determine the winding order of the source polygon
+    // by calculating the determinant of the inverse
+    //
+    float det = M_inv[0]*M_inv[4] - M_inv[1]*M_inv[3];
+    bool ccw;
+    if(det>=0.0f){
+        ccw = true;
+    }else{
+        ccw = false;
+    }
     //
     // initialize the parts of the source polygon
     // that don't change
     //
-    srcPolygon.vertices[0].v10 = f2_dsrcy;
-    srcPolygon.vertices[1].v10 = f2_dsrcx;
-    srcPolygon.vertices[2].v10 = -f2_dsrcy;
-    srcPolygon.vertices[3].v10 = -f2_dsrcx;
-    for(int i=0;i<4;i++){
-        float2 v10 = srcPolygon.vertices[i].v10;
-        srcPolygon.vertices[i].N = normalize((float2)(-v10.y,v10.x));
+    if(ccw){
+        srcPolygon.vertices[0].v10 = f2_dsrcy;
+        srcPolygon.vertices[1].v10 = f2_dsrcx;
+        srcPolygon.vertices[2].v10 = -f2_dsrcy;
+        srcPolygon.vertices[3].v10 = -f2_dsrcx;
+        for(int i=0;i<4;i++){
+            float2 v10 = srcPolygon.vertices[i].v10;
+            srcPolygon.vertices[i].N = normalize((float2)(-v10.y,v10.x));
+        }
+    }else{
+        // source vertices are in a clock wise winding
+        //
+        // first initialize the vertices in the opposite
+        // order
+        //
+        srcPolygon.vertices[3].v0 = (float2)(0.0f,0.0f);
+        srcPolygon.vertices[2].v0 = f2_dsrcy;
+        srcPolygon.vertices[1].v0 = f2_dsrcy + f2_dsrcx;
+        srcPolygon.vertices[0].v0 = f2_dsrcx;
+        //
+        // then find the deltas and the normals
+        //
+        for(int i0=0;i0<4;i0++){
+            int i1 = i0 + 1;
+            if(i1==4)i1=0;
+            float2 v10 = srcPolygon.vertices[i1].v0 - srcPolygon.vertices[i0].v0;
+            srcPolygon.vertices[i0].v10 = v10;
+            srcPolygon.vertices[i0].N = normalize((float2)(-v10.y,v10.x));
+        }
     }
     float total_src_area = f2cross(srcPolygon.vertices[0].v10,srcPolygon.vertices[1].v10);
 
@@ -737,10 +769,17 @@ kernel void affine_transform_aa_exp(
         float4 f4_dst_color = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
 
         // initialize the srcPolygon
-        srcPolygon.vertices[0].v0 = f2_src00;
-        srcPolygon.vertices[1].v0 = f2_src01;
-        srcPolygon.vertices[2].v0 = f2_src11;
-        srcPolygon.vertices[3].v0 = f2_src10;
+        if(ccw){
+            srcPolygon.vertices[0].v0 = f2_src00;
+            srcPolygon.vertices[1].v0 = f2_src01;
+            srcPolygon.vertices[2].v0 = f2_src11;
+            srcPolygon.vertices[3].v0 = f2_src10;
+        }else{
+            srcPolygon.vertices[3].v0 = f2_src00;
+            srcPolygon.vertices[2].v0 = f2_src01;
+            srcPolygon.vertices[1].v0 = f2_src11;
+            srcPolygon.vertices[0].v0 = f2_src10;
+        }
 
         // initialize the pixelVertices
         PixelVertex *pixelVertex = &pixelVertices[0][0];
@@ -768,10 +807,17 @@ kernel void affine_transform_aa_exp(
             pixelVFlag += GRID_SIZE - x;
         }
 
-        pixelVFlags[i2_v0.y-i2_src00.y][i2_src00.x-i2_v0.x] |= V0_BIT;
-        pixelVFlags[i2_v0.y-i2_src01.y][i2_src01.x-i2_v0.x] |= V1_BIT;
-        pixelVFlags[i2_v0.y-i2_src11.y][i2_src11.x-i2_v0.x] |= V2_BIT;
-        pixelVFlags[i2_v0.y-i2_src10.y][i2_src10.x-i2_v0.x] |= V3_BIT;
+        if(ccw){
+            pixelVFlags[i2_v0.y-i2_src00.y][i2_src00.x-i2_v0.x] |= V0_BIT;
+            pixelVFlags[i2_v0.y-i2_src01.y][i2_src01.x-i2_v0.x] |= V1_BIT;
+            pixelVFlags[i2_v0.y-i2_src11.y][i2_src11.x-i2_v0.x] |= V2_BIT;
+            pixelVFlags[i2_v0.y-i2_src10.y][i2_src10.x-i2_v0.x] |= V3_BIT;
+        }else{
+            pixelVFlags[i2_v0.y-i2_src00.y][i2_src00.x-i2_v0.x] |= V3_BIT;
+            pixelVFlags[i2_v0.y-i2_src01.y][i2_src01.x-i2_v0.x] |= V2_BIT;
+            pixelVFlags[i2_v0.y-i2_src11.y][i2_src11.x-i2_v0.x] |= V1_BIT;
+            pixelVFlags[i2_v0.y-i2_src10.y][i2_src10.x-i2_v0.x] |= V0_BIT;
+        }
 
         // bisect and accumulate the src pixels
         PixelVertex *pixel00 = &pixelVertices[0][0];
