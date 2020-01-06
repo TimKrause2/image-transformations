@@ -266,7 +266,7 @@ void MainWindow::timer_func(void)
     M = glm::rotate(M, theta);
     //M = glm::shearX(M,-tanf(30.0f/180.0f*(float)M_PI));
     //M = glm::shearX(M,-1.0f);
-    M = glm::scale(M,glm::vec2(1.0f/3.0f,3.0f));
+    M = glm::scale(M,glm::vec2(1.0f/1.01f,1.01f));
     M = glm::rotate(M,-theta);
     M = glm::translate(M, -A);
     glm::mat3 M_inv = glm::inverse(M);

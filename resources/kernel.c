@@ -595,12 +595,12 @@ float2 f2conform_axis(float2 v){
     float2 v_abs = fabs(v);
     if(v_abs.x>=v_abs.y){
         float tan_theta = v_abs.y/v_abs.x;
-        if(tan_theta<1e-5){
+        if(tan_theta<1e-3){
             v_abs.y = 0;
         }
     }else{
         float tan_theta = v_abs.x/v_abs.y;
-        if(tan_theta<1e-5){
+        if(tan_theta<1e-3){
             v_abs.x = 0;
         }
     }
