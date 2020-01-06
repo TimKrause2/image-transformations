@@ -1061,14 +1061,9 @@ kernel void affine_transform_aa_exp(
             pixelVFlag += offset;
         }
 
-        f4_dst_color /= total_src_area;
+        f4_dst_color /= total_area;
 
-        float area_error = (total_area-total_src_area)/total_src_area;
-        if(fabs(area_error)>0.001){
-            *dst = (uchar4)(0,255,0,255);
-        }else{
-            *dst = convert_uchar4_sat(f4_dst_color*255.0f);
-        }
+        *dst = convert_uchar4_sat(f4_dst_color*255.0f);
 
     }
 }

@@ -17,7 +17,7 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    srcPixmap(":/images/resources/white.png"),
+    srcPixmap(":/images/resources/Lenna_(test_image).png"),
     clFile(":/images/resources/kernel.c", parent)
 {
     ui->setupUi(this);
@@ -264,10 +264,10 @@ void MainWindow::timer_func(void)
     //glm::vec2 A(0.5f,-0.5f);
     glm::mat3 M = glm::translate(glm::mat3(1.0f),A);
     M = glm::rotate(M, theta);
-    //M = glm::shearX(M,-tanf(30.0f/180.0f*(float)M_PI));
+    M = glm::shearX(M,-tanf(30.0f/180.0f*(float)M_PI));
     //M = glm::shearX(M,-1.0f);
-    M = glm::scale(M,glm::vec2(1.0f/1.01f,1.01f));
-    M = glm::rotate(M,-theta);
+    M = glm::scale(M,glm::vec2(1.0f+2.0f/64.0f,1.0f+2.0f/64.0f));
+    //M = glm::rotate(M,-theta);
     M = glm::translate(M, -A);
     glm::mat3 M_inv = glm::inverse(M);
     //qDebug("a11:%.9f a12:%.9f a21:%.9f a22:%.9f",M_inv[0][0],M_inv[1][0],M_inv[0][1],M_inv[1][1]);
