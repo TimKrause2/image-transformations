@@ -147,7 +147,7 @@ uchar f2BisectSrcPolygon(SrcPolygon *sp, float2 v){
     uchar inside_bit = 1;
     for(int e=0;e<4;e++,inside_bit<<=1){
         float2 vv0 = v - sp->vertices[e].v0;
-        if(dot(vv0,sp->vertices[e].N)>-1.1921e-7f){
+        if(dot(vv0,sp->vertices[e].N)>-1e-5f){
             r |= inside_bit;
         }
     }
@@ -227,6 +227,11 @@ void PixelEdgeBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
             }
             break;
         case 3:
+            // test for all outside
+            if((~pe->inside_edge[0])&(~pe->inside_edge[1])&0b1111){
+                pe->code = 0;
+                return;
+            }
             // test for intersection with this edge
             if((pe->inside_edge[0]^pe->inside_edge[1])&edge_bit){
                 if(pe->inside_edge[0]&edge_bit){
