@@ -8,5 +8,8 @@
         <file>resources/1280x640hello.png</file>
         <file>resources/rotm.png</file>
         <file>resources/rotp.png</file>
+        <file>resources/Lenna_(test_image).png</file>
+        <file>resources/Lenna_(test_image)128x128.png</file>
+        <file>resources/test.png</file>
     </qresource>
 </RCC>

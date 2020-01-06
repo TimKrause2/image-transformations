@@ -119,17 +119,17 @@ float PolygonArea(Polygon *p){
     (polygon_ptr)->vertices[(polygon_ptr)->N++] = vertex
 
 typedef struct {
-    int code;
-    int inside_ends[2];
-    int inside_edge[2];
-    int vflag_edge[2];
+    uchar code;
+    uchar inside_ends[2];
+    uchar inside_edge[2];
+    uchar vflag_edge[2];
     float2 v_ends[2];
     float2 v_edge[2];
 } PixelEdge;
 
 typedef struct {
     float2 v;
-    int inside;
+    uchar inside;
 } PixelVertex;
 
 typedef struct {
@@ -142,9 +142,9 @@ typedef struct {
     SrcVertex vertices[4];
 } SrcPolygon;
 
-int f2BisectSrcPolygon(SrcPolygon *sp, float2 v){
-    int r=0;
-    int inside_bit = 1;
+uchar f2BisectSrcPolygon(SrcPolygon *sp, float2 v){
+    uchar r=0;
+    uchar inside_bit = 1;
     for(int e=0;e<4;e++,inside_bit<<=1){
         float2 vv0 = v - sp->vertices[e].v0;
         if(dot(vv0,sp->vertices[e].N)>-1.1921e-7f){
@@ -160,8 +160,8 @@ void PixelEdgeBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
         return;
     }
     // find the intersecting edges
-    int intersecting = pe->inside_ends[0]^pe->inside_ends[1];
-    int edge_bit = 1;
+    uchar intersecting = pe->inside_ends[0]^pe->inside_ends[1];
+    uchar edge_bit = 1;
     for(int e=0;e<4;e++,edge_bit<<=1){
         if(!(edge_bit&intersecting)) continue;
         switch(pe->code){
@@ -249,8 +249,8 @@ void PixelEdgeBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
 void PixelEdgeBorderBisectSrcPolygon(PixelEdge *pe, SrcPolygon *sp){
     // the only case to bisect a border edge is when there is
     // one intersection and the rest are all inside
-    int intersecting = pe->inside_ends[0]^pe->inside_ends[1];
-    int all_inside = pe->inside_ends[0]&pe->inside_ends[1];
+    uchar intersecting = pe->inside_ends[0]^pe->inside_ends[1];
+    uchar all_inside = pe->inside_ends[0]&pe->inside_ends[1];
     switch(intersecting){
     case 1:
         if(all_inside==0b1110){
@@ -382,7 +382,7 @@ void PolygonAddVertexFlags(int flags, SrcPolygon *sp, Polygon *polygon){
     }
 }
 
-void PolygonAddSingleVFlag(Polygon *polygon, int vflag, SrcPolygon *sp){
+void PolygonAddSingleVFlag(Polygon *polygon, uchar vflag, SrcPolygon *sp){
     switch(vflag){
     case 0b0001:
         PolygonAddVertex(polygon,sp->vertices[0].v0);
@@ -399,7 +399,7 @@ void PolygonAddSingleVFlag(Polygon *polygon, int vflag, SrcPolygon *sp){
     }
 }
 
-void PolygonAddMultiVFlag(Polygon *polygon, int vflag, SrcPolygon *sp){
+void PolygonAddMultiVFlag(Polygon *polygon, uchar vflag, SrcPolygon *sp){
     switch(vflag){
     case 0b0000:
         return;
@@ -442,7 +442,7 @@ void PolygonAddMultiVFlag(Polygon *polygon, int vflag, SrcPolygon *sp){
     }
 }
 
-void PolygonAddEdgeSingleVertexForward(Polygon *polygon, PixelEdge *edge, int vflag, SrcPolygon *sp)
+void PolygonAddEdgeSingleVertexForward(Polygon *polygon, PixelEdge *edge, uchar vflag, SrcPolygon *sp)
 {
     switch(edge->code){
     case 0:
@@ -472,7 +472,7 @@ void PolygonAddEdgeSingleVertexForward(Polygon *polygon, PixelEdge *edge, int vf
     }
 }
 
-void PolygonAddEdgeSingleVertexReverse(Polygon *polygon, PixelEdge *edge, int vflag, SrcPolygon *sp)
+void PolygonAddEdgeSingleVertexReverse(Polygon *polygon, PixelEdge *edge, uchar vflag, SrcPolygon *sp)
 {
     switch(edge->code){
     case 0:
@@ -586,6 +586,22 @@ int2 convert_int2_plus(float2 v){
     return r;
 }
 
+float2 f2conform_axis(float2 v){
+    float2 v_abs = fabs(v);
+    if(v_abs.x>=v_abs.y){
+        float tan_theta = v_abs.y/v_abs.x;
+        if(tan_theta<1e-5){
+            v_abs.y = 0;
+        }
+    }else{
+        float tan_theta = v_abs.x/v_abs.y;
+        if(tan_theta<1e-5){
+            v_abs.x = 0;
+        }
+    }
+    return v_abs * sign(v);
+}
+
 kernel void affine_transform_aa(
     global const uchar4 *src_image, // rgba source pointer
     global uchar4       *dst_image, // rgba destination pointer
@@ -681,16 +697,22 @@ kernel void affine_transform_aa_exp(
     f2_src00.y = M_inv[4]*f_y_dst + M_inv[7];
     // change in source for change in destination
     //
-    float2 f2_dsrcx;
-    f2_dsrcx.x = M_inv[0];
-    f2_dsrcx.y = M_inv[1];
+    float2 f2_dsrcx_raw;
+    f2_dsrcx_raw.x = M_inv[0];
+    f2_dsrcx_raw.y = M_inv[1];
     float2 f2_dsrcy;
     f2_dsrcy.x = -M_inv[3];
     f2_dsrcy.y = -M_inv[4];
+    //
+    // conform deltas that are close to the axis to lie
+    // on the axis;
+    float2 f2_dsrcx = f2conform_axis(f2_dsrcx_raw);
+    f2_dsrcy = f2conform_axis(f2_dsrcy);
+
     PixelVertex pixelVertices[GRID_SIZE+1][GRID_SIZE+1];
     PixelEdge xEdges[GRID_SIZE+1][GRID_SIZE];
     PixelEdge yEdges[GRID_SIZE][GRID_SIZE+1];
-    int pixelVFlags[GRID_SIZE][GRID_SIZE];
+    uchar pixelVFlags[GRID_SIZE][GRID_SIZE];
     Polygon polygon;
     SrcPolygon srcPolygon;
     //
@@ -741,7 +763,7 @@ kernel void affine_transform_aa_exp(
     float total_src_area = f2cross(srcPolygon.vertices[0].v10,srcPolygon.vertices[1].v10);
 
     int i_x_dst;
-    for(i_x_dst=0;i_x_dst<width;i_x_dst++,dst++,f2_src00+=f2_dsrcx){
+    for(i_x_dst=0;i_x_dst<width;i_x_dst++,dst++,f2_src00+=f2_dsrcx_raw){
         float2 f2_src01 = f2_src00 + f2_dsrcy;
         float2 f2_src11 = f2_src00 + f2_dsrcy + f2_dsrcx;
         float2 f2_src10 = f2_src00 + f2_dsrcx;
@@ -767,6 +789,7 @@ kernel void affine_transform_aa_exp(
         int2 i2_v0 = (int2)(i2_src_min.x,i2_src_max.y);
         float2 v0 = convert_float2(i2_v0);
         float4 f4_dst_color = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+        float total_area=0.0f;
 
         // initialize the srcPolygon
         if(ccw){
@@ -798,7 +821,7 @@ kernel void affine_transform_aa_exp(
         }
 
         // initialize the pixelVFlags
-        int *pixelVFlag = &pixelVFlags[0][0];
+        uchar *pixelVFlag = &pixelVFlags[0][0];
         for(int y=0;y<Npixely;y++){
             int x;
             for(x=0;x<Npixelx;x++,pixelVFlag++){
@@ -870,6 +893,8 @@ kernel void affine_transform_aa_exp(
                 xEdgeBottom->inside_ends[1] = pixel11->inside;
                 if(y<(Npixely-1)){
                     PixelEdgeBisectSrcPolygon(xEdgeBottom,&srcPolygon);
+                }else{
+                    PixelEdgeBorderBisectSrcPolygon(xEdgeBottom,&srcPolygon);
                 }
                 //
                 // initialize the right edge
@@ -881,6 +906,8 @@ kernel void affine_transform_aa_exp(
                 yEdgeRight->inside_ends[1] = pixel11->inside;
                 if(x<(Npixelx-1)){
                     PixelEdgeBisectSrcPolygon(yEdgeRight,&srcPolygon);
+                }else{
+                    PixelEdgeBorderBisectSrcPolygon(yEdgeRight,&srcPolygon);
                 }
                 //
                 // create the polygon for this pixel
@@ -1009,8 +1036,9 @@ kernel void affine_transform_aa_exp(
                 }
                 float4 f4_src_color = convert_float4(src_color);
                 f4_src_color /= 255.0f;
-
-                f4_dst_color += f4_src_color * PolygonArea(&polygon);
+                float area = PolygonArea(&polygon);
+                total_area += area;
+                f4_dst_color += f4_src_color * area;
             }
             //
             // advance the pointers to the next line
@@ -1030,7 +1058,13 @@ kernel void affine_transform_aa_exp(
 
         f4_dst_color /= total_src_area;
 
-        *dst = convert_uchar4_sat(f4_dst_color*255.0f);
+        float area_error = (total_area-total_src_area)/total_src_area;
+        if(fabs(area_error)>0.001){
+            *dst = (uchar4)(0,255,0,255);
+        }else{
+            *dst = convert_uchar4_sat(f4_dst_color*255.0f);
+        }
+
     }
 }
 

@@ -25,13 +25,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+    devicedialog.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+    devicedialog.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    devicedialog.ui
 
 RESOURCES += images.qrc
 
