@@ -54,6 +54,20 @@ float2 f2intersection(float2 a0, float2 a1, float2 b0, float2 b1){
 
 float2 f2intersection_delta(float2 a0, float2 a1, float2 b0, float2 b10){
     float2 d_a = a1 - a0;
+    float2 r;
+    if(d_a.x==0.0f){
+        float s = (a0.x-b0.x)/b10.x;
+        r.y = b0.y + b10.y*s;
+        r.x = a0.x;
+        return r;
+    }
+    if(d_a.y==0.0f){
+        float s = (a0.y-b0.y)/b10.y;
+        r.x = b0.x + b10.x*s;
+        r.y = a0.y;
+        return r;
+
+    }
     float2 r_a0b0;
     int swap_a;
     float d_a_dot_d_b = dot(d_a,b10);
@@ -147,7 +161,7 @@ uchar f2BisectSrcPolygon(SrcPolygon *sp, float2 v){
     uchar inside_bit = 1;
     for(int e=0;e<4;e++,inside_bit<<=1){
         float2 vv0 = v - sp->vertices[e].v0;
-        if(dot(vv0,sp->vertices[e].N)>-1e-5f){
+        if(dot(vv0,sp->vertices[e].N)>-5e-5f){
             r |= inside_bit;
         }
     }
@@ -898,8 +912,6 @@ kernel void affine_transform_aa_exp(
                 xEdgeBottom->inside_ends[1] = pixel11->inside;
                 if(y<(Npixely-1)){
                     PixelEdgeBisectSrcPolygon(xEdgeBottom,&srcPolygon);
-                }else{
-                    PixelEdgeBorderBisectSrcPolygon(xEdgeBottom,&srcPolygon);
                 }
                 //
                 // initialize the right edge
@@ -911,8 +923,6 @@ kernel void affine_transform_aa_exp(
                 yEdgeRight->inside_ends[1] = pixel11->inside;
                 if(x<(Npixelx-1)){
                     PixelEdgeBisectSrcPolygon(yEdgeRight,&srcPolygon);
-                }else{
-                    PixelEdgeBorderBisectSrcPolygon(yEdgeRight,&srcPolygon);
                 }
                 //
                 // create the polygon for this pixel

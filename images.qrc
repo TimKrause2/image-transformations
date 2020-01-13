@@ -11,5 +11,6 @@
         <file>resources/Lenna_(test_image).png</file>
         <file>resources/Lenna_(test_image)128x128.png</file>
         <file>resources/test.png</file>
+        <file>resources/long.png</file>
     </qresource>
 </RCC>
