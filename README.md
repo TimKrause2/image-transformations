@@ -4,7 +4,9 @@ This is a Qt Creator project. Load with Qt Creator and build for your machine.
 On Ubuntu the OpenCL development files and glm can be installed with:
 
 $ sudo apt install opencl-headers
+
 $ sudo apt install libglm-dev
+
 $ sudo apt install ocl-icd-opencl-dev
 
 And then you'll also need an ICD(Installable Client Driver). This depends on
